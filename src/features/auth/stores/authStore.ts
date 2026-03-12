@@ -1,0 +1,45 @@
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+//Creating Authactions & AuthState
+interface AuthActions {
+  login: (username: string) => void;
+  logout: () => void;
+}
+
+interface AuthState {
+  isAuthenticated: boolean;
+  user: string | null;
+  isHydrated: boolean; //Property that indicates whether the store has been rehydrated from storage. It is set to true after the store has been successfully rehydrated, allowing components to check this property before accessing the store's state to ensure that they are working with the most up-to-date data.
+}
+
+//Authentication store
+
+type AuthStore = AuthActions & AuthState;
+
+export const useAuthStore = create<AuthStore>()(
+  persist(
+    set => ({
+      isAuthenticated: false,
+      user: null,
+      isHydrated: false,
+      login: username => set({ isAuthenticated: true, user: username }),
+      logout: () => set({ isAuthenticated: false, user: null }),
+    }),
+    {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+
+      //Ici on fait l'hydratation du store, c'est à dire que lorsque le store est réhydraté à partir du stockage,
+      //  on met à jour la propriété isHydrated pour indiquer que le store
+      // a été réhydraté avec succès. Cela permet aux composants de vérifier cette propriété avant d'accéder à l'état du
+      //  store pour s'assurer qu'ils travaillent avec les données les plus à jour.
+      onRehydrateStorage: () => state => {
+        if (state) {
+          state.isHydrated = true;
+        }
+      },
+    },
+  ),
+);
